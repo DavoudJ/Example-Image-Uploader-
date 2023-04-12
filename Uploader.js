@@ -8,7 +8,7 @@ class Credentials {
     }
 }
 
-var test_credentials = new Credentials(
+const test_credentials = new Credentials(
     "test_organization",
     "test_username",
     "test_mission"
@@ -16,7 +16,7 @@ var test_credentials = new Credentials(
 
 socket.onopen = function (event) {
     console.log("[open] Connected to server");
-    socket.send(JSON.stringify(test));
+    socket.send(JSON.stringify(test_credentials));
 }
 
 socket.onclose = function (event) {
@@ -26,9 +26,6 @@ socket.onclose = function (event) {
         console.log('[close] Connection died');
     }
 }
-
-// Wait for the connection to become established.
-while (socket.CONNECTING);
 
 const pickerOpts = {
     types: [
@@ -43,22 +40,26 @@ const pickerOpts = {
     multiple: false,
 };
  
-async function getTheFile() {
-    // Open file picker and destructure the result the first handle
-    const [fileHandle] = await window.showOpenFilePicker(pickerOpts);
- 
-    // get file contents
-    return fileHandle.getFile();
+async function sendFile() {
+    try {
+        const [fileHandle] = await window.showOpenFilePicker(pickerOpts);
+        const file = await fileHandle.getFile();
+        const fileReader = new FileReader();
+        fileReader.onload = function(event) {
+            socket.send(event.target.result);
+        };
+        fileReader.readAsArrayBuffer(file);
+    } catch (err) {
+        console.error(err);
+    }
 }
 
-while (true) {
-    if (socket.CLOSED) {
-        break;
-    }
-    try {
-        const file = await getTheFile();
-        socket.send(file);
-    } catch (err) {
-        break;
-    }
+socket.onerror = function(event) {
+    console.error(`[error] ${event.message}`);
 }
+
+socket.onmessage = function(event) {
+    console.log(`[message] Received data: ${event.data}`);
+}
+
+sendFile();
