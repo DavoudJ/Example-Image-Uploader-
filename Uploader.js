@@ -1,4 +1,4 @@
-const socket = new WebSocket('wss://localhost:8080');
+const socket = new WebSocket('ws://localhost:8080');
 
 class Credentials {
     constructor(organization, username, mission) {
@@ -37,29 +37,37 @@ const pickerOpts = {
       },
     ],
     excludeAcceptAllOption: true,
-    multiple: false,
+    multiple: true,
 };
  
 async function sendFile() {
     try {
-        const [fileHandle] = await window.showOpenFilePicker(pickerOpts);
-        const file = await fileHandle.getFile();
-        const fileReader = new FileReader();
-        fileReader.onload = function(event) {
-            socket.send(event.target.result);
-        };
-        fileReader.readAsArrayBuffer(file);
+        const files = await window.showOpenFilePicker(pickerOpts);
+        files.forEach(async fileHandle => {
+            const file = await fileHandle.getFile();
+            const fileReader = new FileReader();
+            fileReader.onload = function(event) {
+                socket.send(event.target.result);
+            };
+            fileReader.readAsArrayBuffer(file);
+        })
+        
     } catch (err) {
         console.error(err);
     }
 }
 
 socket.onerror = function(event) {
-    console.error(`[error] ${event.message}`);
+    console.log(`[error] ${event.message}`);
 }
 
 socket.onmessage = function(event) {
     console.log(`[message] Received data: ${event.data}`);
 }
 
-sendFile();
+const button = document.querySelector('.test');
+if (button) {
+    button.addEventListener('click', async function() {
+        sendFile();
+    });
+}
